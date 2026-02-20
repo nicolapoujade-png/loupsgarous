@@ -1,0 +1,68 @@
+import streamlit as st
+import random
+
+# --- CONFIGURATION ET TRADUCTION ---
+ROLES_FR = {
+    "Loup-Garou": "🐺 Tu dois dévorer les villageois sans te faire attraper.",
+    "Voyante": "🔮 Tu peux découvrir l'identité d'un joueur chaque nuit.",
+    "Médecin": "🛡️ Tu peux protéger un joueur contre l'attaque des loups.",
+    "Villageois": "👨‍🌾 Ton but est de débusquer les loups-garous.",
+    "Sorcière": "🧪 Tu as une potion de vie et une potion de mort."
+}
+
+st.set_page_config(page_title="Le Maître du Jeu - Loup-Garou", page_icon="🐺")
+
+# --- INTERFACE ENSEIGNANT (ADMIN) ---
+st.title("🏰 Jeu du Loup-Garou")
+
+with st.sidebar:
+    st.header("⚙️ Paramètres du Maître")
+    nb_eleves = st.number_input("Nombre d'élèves", min_value=4, max_value=40, value=15)
+    nb_loups = st.slider("Nombre de Loups-Garous", 1, (nb_eleves // 3), 2)
+    
+    special_roles = st.multiselect(
+        "Rôles Spéciaux", 
+        ["Voyante", "Médecin", "Sorcière"], 
+        default=["Voyante"]
+    )
+
+    if st.button("🎲 Générer et Mélanger les Rôles"):
+        # Création de la liste
+        deck = ["Loup-Garou"] * nb_loups
+        for role in special_roles:
+            deck.append(role)
+        
+        # Le reste sont des villageois
+        while len(deck) < nb_eleves:
+            deck.append("Villageois")
+            
+        random.shuffle(deck)
+        st.session_state['deck'] = deck
+        st.session_state['assigned'] = {} # On vide les attributions
+        st.success("Le deck est prêt !")
+
+# --- INTERFACE ÉLÈVE ---
+st.divider()
+st.subheader("📱 Espace Élève")
+nom_eleve = st.text_input("Entre ton prénom :")
+
+if 'deck' in st.session_state:
+    if nom_eleve:
+        # Si l'élève a déjà un rôle, on lui redonne le même
+        if nom_eleve in st.session_state['assigned']:
+            role_joueur = st.session_state['assigned'][nom_eleve]
+        else:
+            # Sinon, on lui donne le prochain rôle dispo
+            if len(st.session_state['assigned']) < len(st.session_state['deck']):
+                role_joueur = st.session_state['deck'][len(st.session_state['assigned'])]
+                st.session_state['assigned'][nom_eleve] = role_joueur
+            else:
+                st.error("Plus de rôles disponibles !")
+                role_joueur = None
+
+        if role_joueur:
+            if st.button(f"Révéler mon rôle pour {nom_eleve}"):
+                st.info(f"**Ton rôle est : {role_joueur}**")
+                st.write(ROLES_FR[role_joueur])
+else:
+    st.warning("En attente que le Maître du Jeu génère les rôles...")
